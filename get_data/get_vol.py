@@ -1,5 +1,5 @@
 import argparse
-from datetime import datetime
+from datetime import datetime, timedelta
 import csv
 import requests
 import os
@@ -13,6 +13,33 @@ class VolumeFetcher:
         """Consulta dados de volume da Binance e salva em CSV"""
         path_file = "get_data/data"
         os.makedirs(path_file, exist_ok=True)
+
+        filename = f"{path_file}/{symbol}_{interval}.csv"
+        if os.path.exists(filename):
+            print(f"\nArquivo existente encontrado: {filename}")
+            with open(filename, "r") as f:
+                reader = csv.reader(f)
+                next(reader)  # pula o cabeçalho
+                rows = list(reader)
+                if rows:
+                    last_row = rows[-1]
+                    last_date_str = last_row[1]  # coluna 'Data'
+                    last_date = datetime.strptime(last_date_str, "%Y-%m-%d %H:%M:%S")
+                    print(
+                        f"Data solicitada: {start_date.strftime('%Y-%m-%d')} a {end_date.strftime('%Y-%m-%d')}\nÚltima data registrada no arquivo: {last_date.strftime('%Y-%m-%d')}"
+                    )
+
+                    resposta = (
+                        input("Deseja continuar a partir do próximo dia? [s/N]: ")
+                        .strip()
+                        .lower()
+                    )
+                    if resposta == "s":
+                        start_date = last_date + timedelta(days=1)
+                        print(f"Nova data de início: {start_date.strftime('%Y-%m-%d')}")
+                    else:
+                        print("Cancelado pelo usuário.")
+                        return
 
         print(f"\nConsultando volume de {symbol}")
         print(
@@ -45,7 +72,7 @@ class VolumeFetcher:
                 all_data.extend(data)
                 last_timestamp = data[-1][0]
                 start_ms = last_timestamp + 1
-                time.sleep(0.2)  # evitar limite de requisições
+                time.sleep(0.2)
 
             except requests.RequestException as e:
                 print(f"\nErro na requisição: {e}")
@@ -55,7 +82,6 @@ class VolumeFetcher:
             print("\nNenhum dado retornado.")
             return None
 
-        filename = f"{path_file}/{symbol}_{interval}.csv"
         try:
             with open(filename, "w", newline="") as f:
                 writer = csv.writer(f)
