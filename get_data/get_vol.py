@@ -15,31 +15,21 @@ class VolumeFetcher:
         os.makedirs(path_file, exist_ok=True)
 
         filename = f"{path_file}/{symbol}_{interval}.csv"
+        existing_data = []
+        existing_dates = set()
+
         if os.path.exists(filename):
             print(f"\nArquivo existente encontrado: {filename}")
             with open(filename, "r") as f:
                 reader = csv.reader(f)
                 next(reader)  # pula o cabeçalho
-                rows = list(reader)
-                if rows:
-                    last_row = rows[-1]
-                    last_date_str = last_row[1]  # coluna 'Data'
-                    last_date = datetime.strptime(last_date_str, "%Y-%m-%d %H:%M:%S")
-                    print(
-                        f"Data solicitada: {start_date.strftime('%Y-%m-%d')} a {end_date.strftime('%Y-%m-%d')}\nÚltima data registrada no arquivo: {last_date.strftime('%Y-%m-%d')}"
-                    )
-
-                    resposta = (
-                        input("Deseja continuar a partir do próximo dia? [s/N]: ")
-                        .strip()
-                        .lower()
-                    )
-                    if resposta == "s":
-                        start_date = last_date + timedelta(days=1)
-                        print(f"Nova data de início: {start_date.strftime('%Y-%m-%d')}")
-                    else:
-                        print("Cancelado pelo usuário.")
-                        return
+                for row in reader:
+                    existing_data.append(row)
+                    try:
+                        dt = datetime.strptime(row[1], "%Y-%m-%d %H:%M:%S")
+                        existing_dates.add(dt.date())
+                    except Exception:
+                        continue
 
         print(f"\nConsultando volume de {symbol}")
         print(
@@ -69,34 +59,39 @@ class VolumeFetcher:
                 if not data:
                     break
 
-                all_data.extend(data)
+                for entry in data:
+                    candle_time = datetime.fromtimestamp(entry[0] / 1000)
+                    if candle_time.date() not in existing_dates:
+                        all_data.append(
+                            [
+                                symbol,
+                                candle_time.strftime("%Y-%m-%d %H:%M:%S"),
+                                interval,
+                                float(entry[5]),
+                            ]
+                        )
+
                 last_timestamp = data[-1][0]
                 start_ms = last_timestamp + 1
-                time.sleep(0.2)
+                time.sleep(0.3)
 
             except requests.RequestException as e:
                 print(f"\nErro na requisição: {e}")
                 return None
 
         if not all_data:
-            print("\nNenhum dado retornado.")
-            return None
+            print("\nNenhum novo dado a adicionar.")
+        else:
+            print(f"\n{len(all_data)} novos registros serão adicionados.")
 
         try:
             with open(filename, "w", newline="") as f:
                 writer = csv.writer(f)
                 writer.writerow(["Ativo", "Data", "Intervalo", "Volume"])
-                for entry in all_data:
-                    writer.writerow(
-                        [
-                            symbol,
-                            datetime.fromtimestamp(entry[0] / 1000).strftime(
-                                "%Y-%m-%d %H:%M:%S"
-                            ),
-                            interval,
-                            float(entry[5]),
-                        ]
-                    )
+                combined = existing_data + all_data
+                combined.sort(key=lambda x: x[1])
+                for row in combined:
+                    writer.writerow(row)
             print(f"\nDados salvos em: {filename}")
             return filename
         except IOError as e:
@@ -108,10 +103,26 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description="Consulta volume de negociação na Binance"
     )
-    parser.add_argument("symbol", help="Ex: BTCUSDT")
-    parser.add_argument("start_date", help="Data inicial (YYYY-MM-DD)")
-    parser.add_argument("end_date", help="Data final (YYYY-MM-DD)")
-    parser.add_argument("interval", choices=["5m", "15m", "1h", "1d"], help="Intervalo")
+    parser.add_argument("symbol", nargs="?", default="BTCUSDT", help="Ex: BTCUSDT")
+    parser.add_argument(
+        "start_date",
+        nargs="?",
+        default=(datetime.now() - timedelta(days=31)).strftime("%Y-%m-%d"),
+        help="Data inicial (YYYY-MM-DD)",
+    )
+    parser.add_argument(
+        "end_date",
+        nargs="?",
+        default=(datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d"),
+        help="Data final (YYYY-MM-DD)",
+    )
+    parser.add_argument(
+        "interval",
+        nargs="?",
+        choices=["5m", "15m", "1h", "1d"],
+        default="1d",
+        help="Intervalo",
+    )
     return parser.parse_args()
 
 
