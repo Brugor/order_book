@@ -119,7 +119,7 @@ def parse_args():
     parser.add_argument(
         "interval",
         nargs="?",
-        choices=["5m", "15m", "1h", "1d"],
+        choices=["1m", "5m", "15m", "1h", "1d"],
         default="1d",
         help="Intervalo",
     )
