@@ -2,8 +2,8 @@ import argparse
 import pandas as pd
 import os
 import json
-import requests
 from dotenv import load_dotenv
+from api import TelegramAlerta
 
 # Carrega variáveis de ambiente do arquivo seguro
 load_dotenv("alerta_vol_bot.env")
@@ -37,22 +37,6 @@ def carregar_limite(symbol, interval, coluna):
     except Exception as e:
         print(f"Erro ao carregar estatísticas: {e}")
         return None
-
-
-def enviar_telegram_alerta(mensagem):
-    token = os.getenv("TELEGRAM_TOKEN")
-    chat_id = os.getenv("TELEGRAM_CHAT_ID")
-    if not token or not chat_id:
-        print("Token ou chat_id do Telegram não configurados.")
-        return
-    url = f"https://api.telegram.org/bot{token}/sendMessage"
-    data = {"chat_id": chat_id, "text": mensagem, "parse_mode": "Markdown"}
-    try:
-        resp = requests.post(url, data=data)
-        resp.raise_for_status()
-        print("✅ Alerta enviado via Telegram.")
-    except requests.RequestException as e:
-        print(f"Erro ao enviar alerta via Telegram: {e}")
 
 
 def comparar_volumes(symbol, limit, coluna="D10", interval="1m"):
@@ -95,8 +79,8 @@ def comparar_volumes(symbol, limit, coluna="D10", interval="1m"):
         ]
         for tipo, preco, vol in alertas:
             mensagem.append(f"[{tipo}] Preço: {float(preco):.2f} Vol: {vol:.5f}")
-
-        enviar_telegram_alerta("\n".join(mensagem))
+        telegram = TelegramAlerta()
+        telegram.enviar("\n".join(mensagem))
 
 
 def main():

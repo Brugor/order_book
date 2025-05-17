@@ -1,12 +1,11 @@
 import argparse
-from datetime import datetime, time
+from datetime import datetime
 import time as time_module
 import json
 import os
 import sys
 import subprocess
-import requests
-from .api import BinancePublicAPI
+from get_data.api import BinancePublicAPI
 from .visualization import plot_order_book
 
 
@@ -25,7 +24,7 @@ def parse_args():
     parser.add_argument(
         "--limit",
         type=int,
-        default=19,
+        default=10,
         help="Padrão: int 10. Número de ordens no book (máx 5000)",
     )
 
@@ -87,17 +86,6 @@ def should_continue(end_time_str):
     return datetime.now().time() < end_time
 
 
-def get_ticker_24h(symbol):
-    url = f"https://api.binance.com/api/v3/ticker/24hr?symbol={symbol.upper()}"
-    try:
-        response = requests.get(url, timeout=5)
-        response.raise_for_status()
-        return response.json()
-    except requests.RequestException as e:
-        print(f"Erro ao obter dados de ticker 24h: {e}")
-        return {}
-
-
 def salvar_order_book_temp(symbol, data):
     os.makedirs("get_data/temp", exist_ok=True)
     path = f"get_data/temp/{symbol}_order_book.json"
@@ -139,7 +127,7 @@ def execute_cli():
             start_time = time_module.time()
 
             order_book = api.get_order_book(args.symbol, args.limit)
-            ticker = get_ticker_24h(args.symbol)
+            ticker = api.get_ticker_24h(args.symbol)
 
             if order_book:
                 # Mesclar dados do ticker ao order_book
