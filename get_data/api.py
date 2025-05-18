@@ -1,8 +1,8 @@
-from os import getenv, makedirs, path
-from requests import get, post, RequestException
+from os import getenv, makedirs, path as os_path
+from requests import get as requests_get, post as requests_post, RequestException
 from datetime import datetime
-from time import sleep
-from csv import reader, writer
+from time import sleep as time_sleep
+from csv import reader as csv_reader, writer as csv_writer
 
 
 class BinancePublicAPI:
@@ -34,17 +34,17 @@ class BinancePublicAPI:
             raise ValueError(f"Limite inválido: {limit}. Aceitos: {valid_limits}.")
 
         endpoint = f"{self.base_url}/depth"
-        params = {"symbol": symbol.upper(), "limit": limit}
+        params = {"symbol": symbol, "limit": limit}
 
         try:
-            response = get(endpoint, params=params)
+            response = requests_get(endpoint, params=params)
             response.raise_for_status()
             return response.json()
-        except RequestException as e:
-            print(f"Erro ao acessar API: {e}")
+        except RequestException:
+            print(f"Erro ao acessar API: {RequestException}")
             return None
 
-    def get_ticker_24h(self, symbol: str = "BTCUSDT") -> dict:
+    def get_ticker_24h(self, symbol: str) -> dict:
         """
         Retorna estatísticas das últimas 24h de negociação do ativo informado.
 
@@ -67,14 +67,14 @@ class BinancePublicAPI:
         }
         """
         endpoint = f"{self.base_url}/ticker/24hr"
-        params = {"symbol": symbol.upper()}
+        params = {"symbol": symbol}
 
         try:
-            response = get(endpoint, params=params, timeout=5)
+            response = requests_get(endpoint, params=params, timeout=5)
             response.raise_for_status()
             return response.json()
-        except RequestException as e:
-            print(f"Erro ao obter dados de ticker 24h: {e}")
+        except RequestException:
+            print(f"Erro ao obter dados de ticker 24h: {RequestException}")
             return None
 
     def fetch_volume(self, symbol, start_date, end_date, interval):
@@ -104,12 +104,12 @@ class BinancePublicAPI:
         existing_data = []
         existing_dates = set()
 
-        if path.exists(filename):
+        if os_path.exists(filename):
             print(f"\nArquivo existente encontrado: {filename}")
             with open(filename, "r") as f:
-                reade = reader(f)
-                next(reade)  # pula o cabeçalho
-                for row in reade:
+                reader = csv_reader(f)
+                next(reader)  # pula o cabeçalho
+                for row in reader:
                     existing_data.append(row)
                     try:
                         dt = datetime.strptime(row[1], "%Y-%m-%d %H:%M:%S")
@@ -118,9 +118,7 @@ class BinancePublicAPI:
                         continue
 
         print(f"\nConsultando volume de {symbol}")
-        print(
-            f"Período: {start_date.strftime('%Y-%m-%d')} a {end_date.strftime('%Y-%m-%d')}"
-        )
+        print(f"Período: {start_date} a {end_date}")
         print(f"Intervalo: {interval}")
 
         start_ms = int(start_date.timestamp() * 1000)
@@ -130,7 +128,7 @@ class BinancePublicAPI:
 
         while start_ms < end_ms:
             params = {
-                "symbol": symbol.upper(),
+                "symbol": symbol,
                 "interval": interval,
                 "startTime": start_ms,
                 "endTime": end_ms,
@@ -138,7 +136,7 @@ class BinancePublicAPI:
             }
 
             try:
-                response = get(f"{self.base_url}/klines", params=params)
+                response = requests_get(f"{self.base_url}/klines", params=params)
                 response.raise_for_status()
                 data = response.json()
 
@@ -159,10 +157,10 @@ class BinancePublicAPI:
 
                 last_timestamp = data[-1][0]
                 start_ms = last_timestamp + 1
-                sleep(0.3)
+                time_sleep(0.3)
 
-            except RequestException as e:
-                print(f"\nErro na requisição: {e}")
+            except RequestException:
+                print(f"\nErro na requisição: {RequestException}")
                 return None
 
         if not all_data:
@@ -172,16 +170,16 @@ class BinancePublicAPI:
 
         try:
             with open(filename, "w", newline="") as f:
-                write = writer(f)
-                write.writerow(["Ativo", "Data", "Intervalo", "Volume"])
+                writer = csv_writer(f)
+                writer.writerow(["Ativo", "Data", "Intervalo", "Volume"])
                 combined = existing_data + all_data
                 combined.sort(key=lambda x: x[1])
                 for row in combined:
-                    write.writerow(row)
+                    writer.writerow(row)
             print(f"\nDados salvos em: {filename}")
             return filename
-        except IOError as e:
-            print(f"Erro ao salvar arquivo: {e}")
+        except IOError:
+            print(f"Erro ao salvar arquivo: {IOError}")
             return None
 
 
@@ -209,8 +207,8 @@ class TelegramAlerta:
         }
 
         try:
-            response = post(self.api_url, data=data, timeout=5)
+            response = requests_post(self.api_url, data=data, timeout=5)
             response.raise_for_status()
             print("✅ Alerta enviado via Telegram.")
-        except RequestException as e:
-            print(f"Erro ao enviar alerta via Telegram: {e}")
+        except RequestException:
+            print(f"Erro ao enviar alerta via Telegram: {RequestException}")

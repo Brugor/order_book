@@ -1,16 +1,15 @@
-import pandas as pd
-import os
-import argparse
-import numpy as np
+from pandas import read_csv as pd_read_csv, DataFrame
+from os import path as os_path
+from args_config import ArgumentBuilder
 
 
-def gerar_estatisticas(symbol, interval):
-    path = f"get_data/data/{symbol}_{interval}.csv"
-    if not os.path.exists(path):
-        print(f"Arquivo não encontrado: {path}")
+def gerar_estatisticas(symbol, accumulated):
+    path_file = f"get_data/data/{symbol}_{accumulated}.csv"
+    if not os_path.exists(path_file):
+        print(f"Arquivo não encontrado: {path_file}")
         return
 
-    df = pd.read_csv(path)
+    df = pd_read_csv(path_file)
     df["Volume"] = df["Volume"].astype(float)
 
     # Quartis
@@ -27,17 +26,15 @@ def gerar_estatisticas(symbol, interval):
     # Criação do novo DataFrame
     estat = {"Q1": [q1], "Q2 (mediana)": [q2], "Q3": [q3], "Q4 (máximo)": [q4]}
     estat.update({k.upper(): [v] for k, v in decimos.items()})
-    df_stat = pd.DataFrame(estat)
+    df_stat = DataFrame(estat)
 
-    output_path = f"get_data/data/{symbol}_{interval}_stat.csv"
+    output_path = f"get_data/data/{symbol}_{accumulated}_stat.csv"
     df_stat.to_csv(output_path, index=False)
     print(f"Estatísticas salvas em: {output_path}")
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Gera estatísticas de volume")
-    parser.add_argument("symbol", help="Símbolo, ex: BTCUSDT")
-    parser.add_argument("interval", help="Intervalo, ex: 1d")
+    parser = ArgumentBuilder.base_parser()
     args = parser.parse_args()
 
-    gerar_estatisticas(args.symbol, args.interval)
+    gerar_estatisticas(args.symbol, args.accumulated)

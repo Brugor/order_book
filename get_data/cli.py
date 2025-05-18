@@ -1,64 +1,12 @@
-import argparse
 from datetime import datetime
-import time as time_module
-import json
-import os
-import sys
-import subprocess
+from time import sleep as time_sleep, time as time_time
 from get_data.api import BinancePublicAPI
-from .visualization import plot_order_book
+from get_data.args_config import ArgumentBuilder
+from get_data.cross_data import analisar_order_book
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(
-        description="Order Book Viewer com Atualização Automática",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-    )
-
-    parser.add_argument(
-        "--symbol",
-        default="BTCUSDT",
-        help="Padrão: BTCUSDT. Código do ativo para busca (ex: BTCUSDT, ETHUSDT)",
-    )
-
-    parser.add_argument(
-        "--limit",
-        type=int,
-        default=10,
-        help="Padrão: int 10. Número de ordens no book (máx 5000)",
-    )
-
-    parser.add_argument(
-        "--plot", action="store_true", help="Exibe gráfico do order book"
-    )
-
-    parser.add_argument(
-        "--interval",
-        type=int,
-        default=5,
-        help="Padrão: int 5. Intervalo mínimo de atualização em segundos",
-    )
-    parser.add_argument(
-        "--start-time",
-        type=str,
-        default=None,
-        help="Padrão: None. Hora de início (formato HH:MM)",
-    )
-
-    parser.add_argument(
-        "--end-time",
-        type=str,
-        default=None,
-        help="Padrão: None. Hora de término (formato HH:MM)",
-    )
-
-    parser.add_argument(
-        "--coluna",
-        type=str,
-        default="D10",
-        help="Padrão: D10. Indica a coluna que deve ser referência nas estatísticas",
-    )
-
+    parser = ArgumentBuilder.with_times_and_limit()
     return parser.parse_args()
 
 
@@ -74,7 +22,7 @@ def wait_until_start_time(start_time_str):
 
     print(f"Aguardando hora de início ({start_time_str})...")
     while datetime.now().time() < start_time:
-        time_module.sleep(1)
+        time_sleep(1)
     return True
 
 
@@ -84,31 +32,6 @@ def should_continue(end_time_str):
 
     end_time = datetime.strptime(end_time_str, "%H:%M").time()
     return datetime.now().time() < end_time
-
-
-def salvar_order_book_temp(symbol, data):
-    os.makedirs("get_data/temp", exist_ok=True)
-    path = f"get_data/temp/{symbol}_order_book.json"
-    with open(path, "w") as f:
-        json.dump(data, f)
-
-
-def chamar_cross_data(symbol, limit, coluna):
-    try:
-        subprocess.run(
-            [
-                sys.executable,
-                "get_data/cross_data.py",
-                symbol,
-                "--limit",
-                str(limit),
-                "--coluna",
-                coluna,
-            ],
-            check=True,
-        )
-    except subprocess.CalledProcessError as e:
-        print(f"Erro ao executar cross_data.py: {e}")
 
 
 def execute_cli():
@@ -124,7 +47,7 @@ def execute_cli():
 
     try:
         while should_continue(args.end_time):
-            start_time = time_module.time()
+            start_time = time_time()
 
             order_book = api.get_order_book(args.symbol, args.limit)
             ticker = api.get_ticker_24h(args.symbol)
@@ -139,8 +62,6 @@ def execute_cli():
                         "askPrice": ticker.get("askPrice"),
                     }
                 )
-                salvar_order_book_temp(args.symbol, order_book)
-
                 print("\033c", end="")
 
                 print(f"Hora da coleta: {datetime.now().strftime('%H:%M:%S')}")
@@ -158,16 +79,15 @@ def execute_cli():
                     spread = best_ask - best_bid
                     print(f"\nSpread: {spread:.4f} ({spread / best_bid * 100:.2f}%)\n")
 
-                if args.plot:
-                    plot_order_book(order_book, args.symbol)
+                analisar_order_book(
+                    order_book, args.symbol, args.limit, args.coluna, args.accumulated
+                )
 
-                chamar_cross_data(args.symbol, args.limit, args.coluna)
-
-            elapsed = time_module.time() - start_time
+            elapsed = time_time() - start_time
             sleep_time = max(5, args.interval - elapsed)
 
             print(f"\nPróxima atualização em {sleep_time:.1f} segundos...")
-            time_module.sleep(sleep_time)
+            time_sleep(sleep_time)
 
     except KeyboardInterrupt:
         print("\nColeta interrompida pelo usuário")
