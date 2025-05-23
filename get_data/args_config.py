@@ -74,3 +74,14 @@ class ArgumentBuilder:
         )
 
         return parser
+
+    @staticmethod
+    def with_episodes():
+        parser = ArgumentBuilder.base_parser()
+        parser.add_argument(
+            "--episodes",
+            type=int,
+            default=50,
+            help="Número de episódios de treinamento",
+        )
+        return parser

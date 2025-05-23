@@ -4,6 +4,12 @@ from datetime import datetime
 from time import sleep as time_sleep
 from csv import reader as csv_reader, writer as csv_writer
 
+from dotenv import load_dotenv
+
+# Força o carregamento do .env que está uma pasta acima
+dotenv_path = os_path.join(os_path.dirname(__file__), "..", "alerta_vol_bot.env")
+load_dotenv(dotenv_path)
+
 
 class BinancePublicAPI:
     base_url = "https://api.binance.com/api/v3"
@@ -151,6 +157,7 @@ class BinancePublicAPI:
                                 symbol,
                                 candle_time.strftime("%Y-%m-%d %H:%M:%S"),
                                 interval,
+                                float(entry[4]),
                                 float(entry[5]),
                             ]
                         )
@@ -171,7 +178,7 @@ class BinancePublicAPI:
         try:
             with open(filename, "w", newline="") as f:
                 writer = csv_writer(f)
-                writer.writerow(["Ativo", "Data", "Intervalo", "Volume"])
+                writer.writerow(["Ativo", "Data", "Intervalo", "Preço", "Volume"])
                 combined = existing_data + all_data
                 combined.sort(key=lambda x: x[1])
                 for row in combined:

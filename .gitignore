@@ -1,3 +1,21 @@
 get_data/data/Untitled.ipynb
 alerta_vol_bot.env
 
+get_data/data/BTCUSDT_5m.csv
+logs/BTCUSDT_decisions_log.csv
+logs/BTCUSDT_q_table_20250520_221816.json
+logs/BTCUSDT_q_table_20250520_222047.json
+logs/BTCUSDT_q_table_20250520_222748.json
+logs/BTCUSDT_q_table_20250520_223350.json
+logs/BTCUSDT_q_table_20250520_231657.json
+logs/BTCUSDT_q_table_20250521_000439.json
+logs/BTCUSDT_q_table_20250521_001740.json
+logs/BTCUSDT_q_table_20250521_222458.json
+logs/BTCUSDT_q_table_20250521_222901.json
+logs/BTCUSDT_q_table_20250521_224431.json
+logs/BTCUSDT_q_table_20250521_225424.json
+logs/BTCUSDT_q_table_20250521_231532.json
+logs/BTCUSDT_q_table_20250522_182332.json
+logs/BTCUSDT_q_table.json
+logs/BTCUSDT_trades.json
+get_data/data/BTCUSDT_5m.csv
